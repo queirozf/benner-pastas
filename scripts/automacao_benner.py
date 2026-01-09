@@ -1,12 +1,19 @@
+from time import sleep
+
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from dotenv import load_dotenv
 import time
 import os
 import sys
+from datetime import date, timedelta
+import re
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 
 
 def automacao_agibank_juridico(username, password):
@@ -17,15 +24,15 @@ def automacao_agibank_juridico(username, password):
         username (str): O nome de usuário para login.
         password (str): A senha para login.
     """
-    # 1. Configuração do WebDriver
-    # Você precisará ter o ChromeDriver (para Google Chrome) ou o driver correspondente
-    # para o seu navegador (ex: GeckoDriver para Firefox) instalado e acessível.
-    # O executável do driver deve estar no PATH do sistema ou você pode especificar
-    # o caminho completo, por exemplo:
-    # driver = webdriver.Chrome(executable_path='/caminho/para/chromedriver')
+    # Estanciar caminho txt para escrever dados coletados
+    file_path = "C:\\temp\\agi_novas_pastas.txt"
+    # Buscar datas de hoje e ontem
+    today = date.today()
+    today_str = today.strftime("%d/%m/%Y")
+    yesterday = today - timedelta(days=1)
+    yesterday_str = yesterday.strftime("%d/%m/%Y")
 
-    # Para simplicidade, assumimos que o chromedriver está no PATH.
-    # Certifique-se de que a versão do ChromeDriver seja compatível com a sua versão do Google Chrome.
+    # 1. Configuração do WebDriver
     print("Iniciando o navegador Chrome...")
     driver = webdriver.Chrome()
     driver.maximize_window()  # Maximiza a janela do navegador
@@ -103,10 +110,114 @@ def automacao_agibank_juridico(username, password):
             print("Erro: O elemento do report Ultimos pendentes, não foi encontrado.")
             print("\nAutomação concluída!")
 
-        # Manter o navegador aberto por um tempo para você poder inspecionar a página.
-        print("O navegador permanecerá aberto por 25 segundos para inspeção.")
-        time.sleep(25)
+        # 9. Preencher o campo das datas de início e fim da pesquisa e clicar na lupa
+        try:
+            wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@class='form-control']")))
+            print("O campo de datas está funcional para digitação")
 
+            # Seletores para o campo de "Cadastrado em":
+            range_datas = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@class='form-control']")))
+            range_datas.send_keys(yesterday_str+"00:00 - "+today_str+"23:59")
+            print(f"Data inicial ('{yesterday_str}') e data final ({today_str})preenchidas.")
+            sleep(5)
+            pesquisar_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[3]/div[2]/div/div/div[2]/div/div[2]/span/div/div/div/div[3]/a[2][@class='btn btn-primary filter-button']")))
+            pesquisar_button.click()
+            print("Botão de lupa clicado. Aguardando carregar registros...")
+        except TimeoutException:
+            print("Erro: O campo de datas não foi carregado.")
+
+        # 10. Encontrar paginação e percorrer itens da tabela
+        try:
+            page_number = 1
+            while True:
+                # Checar se botão 'Next page' está habilitado
+                next_button = driver.find_element(By.XPATH, "//div[5]/div/div[1]/ul/li[2]/a[not(@disabled)]")
+
+                # Caso botão estiver habilitado
+                if next_button:
+                    # Encontra cada linha da tabela
+                    items = driver.find_elements(By.XPATH, "//tbody/tr[@rel < 9]")
+
+                    loop_index = 0
+                    # Percorre cada linha da tabela
+                    for item in items:
+                        loop_index += 1
+                        print("Loop index:" + str(loop_index))
+                        # Coleta alguns dados da linha dessa tabela
+                        # Extrai nr da pasta
+                        pasta_xpath = f"//table/tbody/tr[{loop_index}]/td[6]/a"
+                        nr_pasta = driver.find_element(By.XPATH, pasta_xpath).text
+                        print(f"Número da pasta: {nr_pasta}")
+                        # Extrai nr do processo
+                        p_xpath = f"//table/tbody/tr[{loop_index}]/td[7]/a"
+                        nr_processo = driver.find_element(By.XPATH, p_xpath).text
+                        print(f"Número do processo: {nr_processo}")
+                        # Extrai nome do adverso
+                        nome_xpath = f"//table/tbody/tr[{loop_index}]/td[8]/a"
+                        nm_adverso = driver.find_element(By.XPATH, nome_xpath).text
+                        print(f"Nome do adverso: {nm_adverso}")
+
+                        sleep(3)
+                        # Entra no detalhe do icone pessoa, para extrair o nr do CPF
+                        person_xpath = wait.until(EC.element_to_be_clickable((By.XPATH, f"//table/tbody/tr[{loop_index}]/td[1]/a[4]")))
+                        person_xpath.click()
+                        print(f"Entrou no iframe de Partes")
+                        try:
+                            # Mudar para o primeiro iframe
+                            # Utilizar waits explicitos
+                            WebDriverWait(driver, 10).until(
+                                EC.frame_to_be_available_and_switch_to_it((By.TAG_NAME, "iframe"))
+                            )
+                        except Exception as e:
+                            print(f"An error occurred: {e}")
+
+                        wait.until(EC.element_to_be_clickable((By.XPATH, "//table/tbody/tr[td/a[text()= 'Adverso']]/td[8]/a")))
+                        print(f"Aguarda Adverso carregar na tela Iframe")
+                        # Extrai valor do PCF
+                        cpf_formatado = driver.find_element(By.XPATH, "//table/tbody/tr[td/a[text()= 'Adverso']]/td[8]/a").text
+                        print(f"CPF formatado do adverso: {cpf_formatado}")
+                        # Extract all sequences of digits (as strings)
+                        cpf = re.findall(r'\d+', cpf_formatado)
+                        cpf= "".join(cpf)
+                        print(f"CPF do adverso: {cpf}")
+
+                        driver.switch_to.default_content()
+                        print("Sai do iframe e volta para conteudo principal")
+                        #Fecha frame
+                        # Tecla ESCAPE key
+                        sleep(3)
+                        ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                        # wait.until(EC.element_to_be_clickable((By.XPATH, "//*[@id='ModalCommand_modalCloseButton']")))
+                        # driver.find_element(By.XPATH, "//*[@id='ModalCommand_modalCloseButton']").click()
+
+                        # Escreve dados no txt
+                        with open(file_path, 'a') as file:
+                            # Escreve no arquivo
+                            file.write(f'{{"cpf":"{cpf}","cpfFormatado":"{cpf_formatado}","nrProcesso":"{nr_processo}","status":"ABERTO","tipoProcesso":"JURIDICOBUSCA"}}\n')
+                            print("Escreveu a linha no txt")
+
+                        print(f"File '{file_path}' created and written successfully.")
+
+                    # Click the next button to continue the loop
+                    next_button[0].click()
+                    page_number += 1
+                    time.sleep(2)  # Wait for the new page to load
+                else:
+                    # The 'Next' button is no longer found (condition is False), so break the loop
+                    print(f"Chegou na última apagina após processar {page_number} paginas.")
+
+                    break
+        except TimeoutException:
+            print("Erro: Não foram encontrados pastas cadastradas para essas datas pesquisadas.")
+        except NoSuchElementException:
+            print("Erro: Elemento não foi encontrado na tela.")
+
+
+
+        # Manter o navegador aberto por um tempo para você poder inspecionar a página.
+        print("O navegador permanecerá aberto por 55 segundos para inspeção.")
+        time.sleep(55)
+        print("\nAutomação concluída!")
     except Exception as e:
         print(f"Ocorreu um erro inesperado durante a automação: {e}")
     finally:
@@ -116,15 +227,19 @@ def automacao_agibank_juridico(username, password):
 
 
 if __name__ == "__main__":
-    # Carrega credenciais das variáveis de ambiente
-    usuario_agibank = os.environ.get("AGIBANK_USER")
-    senha_agibank = os.environ.get("AGIBANK_PASS")
+    # Carrega as variáveis do arquivo .env
+    load_dotenv()
 
-    if not usuario_agibank or not senha_agibank:
-        print("Erro: As variáveis de ambiente AGIBANK_USER e AGIBANK_PASS não estão definidas.")
+    benner_username = os.getenv("AGIBANK_USER")
+    benner_password = os.getenv("AGIBANK_PASS")
+
+    if not benner_username or not benner_password:
+        print("Erro: As variáveis AGIBANK_USER e AGIBANK_PASS não estão definidas.")
         print("Defina-as antes de executar o script, por exemplo:")
         print("  export AGIBANK_USER=seu_usuario")
         print("  export AGIBANK_PASS=sua_senha")
         sys.exit(1)
 
-    automacao_agibank_juridico(usuario_agibank, senha_agibank)
+
+
+    automacao_agibank_juridico(benner_username, benner_password)
