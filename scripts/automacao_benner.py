@@ -120,7 +120,7 @@ def automacao_agibank_juridico(username, password):
             # Seletores para o campo de "Cadastrado em":
             range_datas = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@class='form-control']")))
             # range_datas.send_keys(yesterday_str+"00:00 - "+yesterday_str+"23:59")
-            range_datas.send_keys("16/01/2026 00:00 - 16/01/2026 21:41")
+            range_datas.send_keys("01/01/2026 00:00 - 15/01/2026 17:45")
             print(f"Data inicial ('{yesterday_str}') e data final ({today_str})preenchidas.")
             # sleep(5)
             pesquisar_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[3]/div[2]/div/div/div[2]/div/div[2]/span/div/div/div/div[3]/a[2][@class='btn btn-primary filter-button']")))
@@ -184,12 +184,23 @@ def automacao_agibank_juridico(username, password):
                                 EC.element_to_be_clickable((By.XPATH, p_xpath))).text
                             print(f"Número do processo: {nr_processo}")
 
+                        # Extrai data e hora do cadastro da pasta
+                        try:
+                            dh_cadastro_xpath = f"//table/tbody/tr[{loop_index}]/td[5]/a"
+                            dh_cadastro = WebDriverWait(driver, 20).until(
+                                EC.element_to_be_clickable((By.XPATH, dh_cadastro_xpath))).text
+
+                        except:
+                            print("Entrou no except do cadastro da pasta")
+                            dh_cadastro_xpath = f"//table/tbody/tr[{loop_index}]/td[5]/a"
+                            dh_cadastro = WebDriverWait(driver, 20).until(
+                                EC.element_to_be_clickable((By.XPATH, dh_cadastro_xpath))).text
+
                         # Extrai nome do adverso
                         try:
                             nome_xpath = f"//table/tbody/tr[{loop_index}]/td[8]/a"
                             nm_adverso = WebDriverWait(driver, 20).until(
                                 EC.element_to_be_clickable((By.XPATH, nome_xpath))).text
-                            # nm_adverso = driver.find_element(By.XPATH, nome_xpath).text
 
                         except:
                             print("Entrou no except do Nome do Adverso")
@@ -218,6 +229,7 @@ def automacao_agibank_juridico(username, password):
                         try:
                             linha_person_iframe = ''
                             print(f"Procura a linha da grid que contenha o nme do adverso: //html/body/form/div[3]/div[2]/div/div[1]/div[2]/div[2]/div/div/div[2]/div/div[2]/div[4]/table/tbody/tr[td/a[contains(concat(' ', normalize-space(.), ' '), ' {nm_adverso} ')]]/td[2]/a")
+
                             linha_person_iframe = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, f"//html/body/form/div[3]/div[2]/div/div[1]/div[2]/div[2]/div/div/div[2]/div/div[2]/div[4]/table/tbody/tr[td/a[contains(concat(' ', normalize-space(.), ' '), ' {nm_adverso} ')]]/td[2]/a"))).text
                             print(f"valor linha com nome do adverso: {linha_person_iframe}")
                         except:
@@ -264,10 +276,10 @@ def automacao_agibank_juridico(username, password):
                         with open(file_path, 'a') as file:
                             # Escreve no arquivo
                             if cpf:
-                                file.write(f'{{"cpf":"{cpf}","cpfFormatado":"{cpf_formatado}","nrProcesso":"{nr_processo}","status":"ABERTO","tipoProcesso":"JURIDICOBUSCA", "{nm_adverso}"}}\n')
+                                file.write(f'{dh_cadastro}, {{"cpf":"{cpf}","cpfFormatado":"{cpf_formatado}","nrProcesso":"{nr_processo}","status":"ABERTO","tipoProcesso":"JURIDICOBUSCA", "{nm_adverso}"}}\n')
                             else:
                                 file.write(
-                                    f'{{"cpf":"{cnpj}","cpfFormatado":"{cnpj_formatado}","nrProcesso":"{nr_processo}","status":"ABERTO","tipoProcesso":"JURIDICOBUSCA", "{nm_adverso}"}}\n')
+                                    f'{dh_cadastro}, {{"cpf":"{cnpj}","cpfFormatado":"{cnpj_formatado}","nrProcesso":"{nr_processo}","status":"ABERTO","tipoProcesso":"JURIDICOBUSCA", "{nm_adverso}"}}\n')
                             # print("Escreveu a linha no txt")
 
                         print(f"File '{file_path}' created and written successfully.")
