@@ -12,8 +12,10 @@ import os
 import sys
 from datetime import date, timedelta
 import re
+from selenium.webdriver.common.actions.wheel_input import ScrollOrigin
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.keys import Keys
 
 
 def automacao_agibank_juridico(username, password):
@@ -117,12 +119,15 @@ def automacao_agibank_juridico(username, password):
 
             # Seletores para o campo de "Cadastrado em":
             range_datas = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@class='form-control']")))
-            range_datas.send_keys(yesterday_str+"00:00 - "+today_str+"23:59")
+            # range_datas.send_keys(yesterday_str+"00:00 - "+yesterday_str+"23:59")
+            range_datas.send_keys("16/01/2026 00:00 - 16/01/2026 21:41")
             print(f"Data inicial ('{yesterday_str}') e data final ({today_str})preenchidas.")
-            sleep(5)
+            # sleep(5)
             pesquisar_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[3]/div[2]/div/div/div[2]/div/div[2]/span/div/div/div/div[3]/a[2][@class='btn btn-primary filter-button']")))
             pesquisar_button.click()
             print("Botão de lupa clicado. Aguardando carregar registros...")
+            sleep(3)
+            # driver.find_element(By.TAG_NAME, "html").send_keys(Keys.PAGE_DOWN)
         except TimeoutException:
             print("Erro: O campo de datas não foi carregado.")
 
@@ -131,77 +136,151 @@ def automacao_agibank_juridico(username, password):
             page_number = 1
             while True:
                 # Checar se botão 'Next page' está habilitado
-                next_button = driver.find_element(By.XPATH, "//div[5]/div/div[1]/ul/li[2]/a[not(@disabled)]")
+                next_button = driver.find_element(By.XPATH, "//html/body/form/div[3]/div[3]/div[3]/div[1]/div[3]/div[2]/div/div/div[2]/div/div[2]/div[5]/div/div[1]/ul/li[2]/a[not(@disabled)][contains(@id, 'btNextPage')]")
 
                 # Caso botão estiver habilitado
                 if next_button:
                     # Encontra cada linha da tabela
-                    items = driver.find_elements(By.XPATH, "//tbody/tr[@rel < 9]")
+                    items = driver.find_elements(By.XPATH, "//tbody/tr[@rel <= 9]")
 
                     loop_index = 0
                     # Percorre cada linha da tabela
                     for item in items:
                         loop_index += 1
+                        # Limpando variáveis
+                        nr_processo = None
+                        nr_pasta = None
+                        cpf = None
+                        cpf_formatado = None
+                        cnpj = None
+                        cnpj_formatado = None
                         print("Loop index:" + str(loop_index))
                         # Coleta alguns dados da linha dessa tabela
                         # Extrai nr da pasta
-                        pasta_xpath = f"//table/tbody/tr[{loop_index}]/td[6]/a"
-                        nr_pasta = driver.find_element(By.XPATH, pasta_xpath).text
-                        print(f"Número da pasta: {nr_pasta}")
+                        try:
+                            pasta_xpath = f"//table/tbody/tr[{loop_index}]/td[6]/a"
+                            nr_pasta = WebDriverWait(driver, 20).until(
+                                EC.element_to_be_clickable((By.XPATH, pasta_xpath))).text
+                            # nr_pasta = driver.find_element(By.XPATH, pasta_xpath).text
+                            print(f"Número da pasta: {nr_pasta}")
+                        except:
+                            print("Entrou no except do nr da pasta")
+                            pasta_xpath = f"//table/tbody/tr[{loop_index}]/td[6]/a"
+                            print(f"Tenta clicar no xpath {pasta_xpath}")
+                            nr_pasta = WebDriverWait(driver, 20).until(
+                                EC.element_to_be_clickable((By.XPATH, pasta_xpath))).text
+
                         # Extrai nr do processo
-                        p_xpath = f"//table/tbody/tr[{loop_index}]/td[7]/a"
-                        nr_processo = driver.find_element(By.XPATH, p_xpath).text
-                        print(f"Número do processo: {nr_processo}")
+                        try:
+                            p_xpath = f"//table/tbody/tr[{loop_index}]/td[7]/a"
+                            nr_processo = WebDriverWait(driver, 20).until(
+                            EC.element_to_be_clickable((By.XPATH, p_xpath))).text
+                            # nr_processo = driver.find_element(By.XPATH, p_xpath).text
+                            print(f"Número do processo: {nr_processo}")
+                        except:
+                            print("Entrou no except do nr do processo")
+                            p_xpath = f"//table/tbody/tr[{loop_index}]/td[7]/a"
+                            nr_processo = WebDriverWait(driver, 20).until(
+                                EC.element_to_be_clickable((By.XPATH, p_xpath))).text
+                            print(f"Número do processo: {nr_processo}")
+
                         # Extrai nome do adverso
-                        nome_xpath = f"//table/tbody/tr[{loop_index}]/td[8]/a"
-                        nm_adverso = driver.find_element(By.XPATH, nome_xpath).text
-                        print(f"Nome do adverso: {nm_adverso}")
+                        try:
+                            nome_xpath = f"//table/tbody/tr[{loop_index}]/td[8]/a"
+                            nm_adverso = WebDriverWait(driver, 20).until(
+                                EC.element_to_be_clickable((By.XPATH, nome_xpath))).text
+                            # nm_adverso = driver.find_element(By.XPATH, nome_xpath).text
+
+                        except:
+                            print("Entrou no except do Nome do Adverso")
+                            nome_xpath = f"//table/tbody/tr[{loop_index}]/td[8]/a"
+                            nm_adverso = WebDriverWait(driver, 20).until(
+                                EC.element_to_be_clickable((By.XPATH, nome_xpath))).text
 
                         sleep(3)
+
                         # Entra no detalhe do icone pessoa, para extrair o nr do CPF
-                        person_xpath = wait.until(EC.element_to_be_clickable((By.XPATH, f"//table/tbody/tr[{loop_index}]/td[1]/a[4]")))
+                        person_xpath = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, f"//table/tbody/tr[{loop_index}]/td[1]/a[4][@class = 'btn btn-xs btn-circle default']")))
+                        print(f"Tenta clicar no icone pessoa:     //table/tbody/tr[{loop_index}]/td[1]/a[4][@class = 'btn btn-xs btn-circle default']")
                         person_xpath.click()
                         print(f"Entrou no iframe de Partes")
                         try:
-                            # Mudar para o primeiro iframe
                             # Utilizar waits explicitos
-                            WebDriverWait(driver, 10).until(
+                            sleep(5)
+                            # Mudar para o primeiro iframe
+                            WebDriverWait(driver, 20).until(
                                 EC.frame_to_be_available_and_switch_to_it((By.TAG_NAME, "iframe"))
                             )
+                            print("Aguarda carregar Iframe")
                         except Exception as e:
                             print(f"An error occurred: {e}")
 
-                        wait.until(EC.element_to_be_clickable((By.XPATH, "//table/tbody/tr[td/a[text()= 'Adverso']]/td[8]/a")))
-                        print(f"Aguarda Adverso carregar na tela Iframe")
-                        # Extrai valor do PCF
-                        cpf_formatado = driver.find_element(By.XPATH, "//table/tbody/tr[td/a[text()= 'Adverso']]/td[8]/a").text
+                        try:
+                            linha_person_iframe = ''
+                            print(f"Procura a linha da grid que contenha o nme do adverso: //html/body/form/div[3]/div[2]/div/div[1]/div[2]/div[2]/div/div/div[2]/div/div[2]/div[4]/table/tbody/tr[td/a[contains(concat(' ', normalize-space(.), ' '), ' {nm_adverso} ')]]/td[2]/a")
+                            linha_person_iframe = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, f"//html/body/form/div[3]/div[2]/div/div[1]/div[2]/div[2]/div/div/div[2]/div/div[2]/div[4]/table/tbody/tr[td/a[contains(concat(' ', normalize-space(.), ' '), ' {nm_adverso} ')]]/td[2]/a"))).text
+                            print(f"valor linha com nome do adverso: {linha_person_iframe}")
+                        except:
+                            print("Caso não encontre a linha com o nome do adverso")
+                            next_button_iframe = driver.find_element(By.XPATH, "// *[ @ id = 'ctl00_Main_PARTES_btNextPage']")
+                            print("Clica no botao next")
+                            next_button_iframe.click()
+                            print("Botao next clicado")
+                            WebDriverWait(driver, 20).until(EC.element_to_be_clickable(
+                                (By.XPATH, f"//table/tbody/tr[td/a[text()= '{nm_adverso}']]/td[8]/a")))
+                        print(f"Aguardou Adverso carregar na tela Iframe")
+
+                        # Extrai valor do CPF
+                        cpf_formatado = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH,
+                                                                                    f"//table/tbody/tr[td/a[contains(concat(' ', normalize-space(.), ' '), ' {nm_adverso} ')]]/td[8]/a")))
+                        print(f"//table/tbody/tr[td/a[contains(concat(' ', normalize-space(.), ' '), ' {nm_adverso} ')]]/td[8]/a")
+                        cpf_formatado = driver.find_element(By.XPATH, f"//table/tbody/tr[td/a[contains(concat(' ', normalize-space(.), ' '), ' {nm_adverso} ')]]/td[8]/a").text
                         print(f"CPF formatado do adverso: {cpf_formatado}")
-                        # Extract all sequences of digits (as strings)
                         cpf = re.findall(r'\d+', cpf_formatado)
                         cpf= "".join(cpf)
                         print(f"CPF do adverso: {cpf}")
 
+                        if not cpf:
+                            cnpj_formatado = driver.find_element(By.XPATH,
+                                                                f"//table/tbody/tr[td/a[contains(concat(' ', normalize-space(.), ' '), ' {nm_adverso} ')]]/td[9]/a").text
+                            print(f"CNPJ formatado do adverso: {cnpj_formatado}")
+                            # Extract all sequences of digits (as strings)
+                            cnpj = re.findall(r'\d+', cnpj_formatado)
+                            cnpj = "".join(cnpj)
+                            print(f"CNPJ do adverso: {cnpj}")
+                            print(f"CPF não carregou algum valor, verificar ... Loop index é {loop_index}")
+
                         driver.switch_to.default_content()
-                        print("Sai do iframe e volta para conteudo principal")
+                        close_frame = driver.find_element(By.XPATH, "//*[@id='ModalCommand_modalCloseButton']")
+                        close_frame.click()
+                        print("Saiu do iframe e volta para conteudo principal")
                         #Fecha frame
                         # Tecla ESCAPE key
                         sleep(3)
-                        ActionChains(driver).send_keys(Keys.ESCAPE).perform()
-                        # wait.until(EC.element_to_be_clickable((By.XPATH, "//*[@id='ModalCommand_modalCloseButton']")))
-                        # driver.find_element(By.XPATH, "//*[@id='ModalCommand_modalCloseButton']").click()
 
+                        # ActionChains(driver).send_keys(Keys.ESCAPE).perform()
+                        print("Enviou tecla ESC para sair do popup pessoas")
                         # Escreve dados no txt
                         with open(file_path, 'a') as file:
                             # Escreve no arquivo
-                            file.write(f'{{"cpf":"{cpf}","cpfFormatado":"{cpf_formatado}","nrProcesso":"{nr_processo}","status":"ABERTO","tipoProcesso":"JURIDICOBUSCA"}}\n')
-                            print("Escreveu a linha no txt")
+                            if cpf:
+                                file.write(f'{{"cpf":"{cpf}","cpfFormatado":"{cpf_formatado}","nrProcesso":"{nr_processo}","status":"ABERTO","tipoProcesso":"JURIDICOBUSCA", "{nm_adverso}"}}\n')
+                            else:
+                                file.write(
+                                    f'{{"cpf":"{cnpj}","cpfFormatado":"{cnpj_formatado}","nrProcesso":"{nr_processo}","status":"ABERTO","tipoProcesso":"JURIDICOBUSCA", "{nm_adverso}"}}\n')
+                            # print("Escreveu a linha no txt")
 
                         print(f"File '{file_path}' created and written successfully.")
 
                     # Click the next button to continue the loop
-                    next_button[0].click()
+                    print("Busca xpath do botao next")
+                    next_button = driver.find_element(By.XPATH,
+                                                      "//html/body/form/div[3]/div[3]/div[3]/div[1]/div[3]/div[2]/div/div/div[2]/div/div[2]/div[5]/div/div[1]/ul/li[2]/a[not(@disabled)][contains(@id, 'btNextPage')]")
+                    next_button.click()
+                    print("Clica no botao next")
                     page_number += 1
-                    time.sleep(2)  # Wait for the new page to load
+                    time.sleep(10)  # Wait for the new page to load
+                    driver.find_element(By.TAG_NAME,"html").send_keys(Keys.PAGE_UP)
                 else:
                     # The 'Next' button is no longer found (condition is False), so break the loop
                     print(f"Chegou na última apagina após processar {page_number} paginas.")
@@ -216,7 +295,7 @@ def automacao_agibank_juridico(username, password):
 
         # Manter o navegador aberto por um tempo para você poder inspecionar a página.
         print("O navegador permanecerá aberto por 55 segundos para inspeção.")
-        time.sleep(55)
+        time.sleep(55000000)
         print("\nAutomação concluída!")
     except Exception as e:
         print(f"Ocorreu um erro inesperado durante a automação: {e}")
