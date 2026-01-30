@@ -15,6 +15,7 @@ import re
 from selenium.webdriver.common.actions.wheel_input import ScrollOrigin
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.keys import Keys
 
 
@@ -120,7 +121,7 @@ def automacao_agibank_juridico(username, password):
             # Seletores para o campo de "Cadastrado em":
             range_datas = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@class='form-control']")))
             # range_datas.send_keys(yesterday_str+"00:00 - "+yesterday_str+"23:59")
-            range_datas.send_keys("01/01/2026 00:00 - 15/01/2026 17:45")
+            range_datas.send_keys("01/01/2026 00:00 - 10/01/2026 01:54")
             print(f"Data inicial ('{yesterday_str}') e data final ({today_str})preenchidas.")
             # sleep(5)
             pesquisar_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[3]/div[2]/div/div/div[2]/div/div[2]/span/div/div/div/div[3]/a[2][@class='btn btn-primary filter-button']")))
@@ -189,6 +190,7 @@ def automacao_agibank_juridico(username, password):
                             dh_cadastro_xpath = f"//table/tbody/tr[{loop_index}]/td[5]/a"
                             dh_cadastro = WebDriverWait(driver, 20).until(
                                 EC.element_to_be_clickable((By.XPATH, dh_cadastro_xpath))).text
+                            print(f"Data cadastro pasta: {dh_cadastro}")
 
                         except:
                             print("Entrou no except do cadastro da pasta")
@@ -211,8 +213,8 @@ def automacao_agibank_juridico(username, password):
                         sleep(3)
 
                         # Entra no detalhe do icone pessoa, para extrair o nr do CPF
-                        person_xpath = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, f"//table/tbody/tr[{loop_index}]/td[1]/a[4][@class = 'btn btn-xs btn-circle default']")))
-                        print(f"Tenta clicar no icone pessoa:     //table/tbody/tr[{loop_index}]/td[1]/a[4][@class = 'btn btn-xs btn-circle default']")
+                        person_xpath = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, f"//table/tbody/tr[{loop_index}]/td[1]/a[@class = 'btn btn-xs btn-circle default']")))
+                        print(f"Tenta clicar no icone pessoa:     //table/tbody/tr[{loop_index}]/td[1]/a[@class = 'btn btn-xs btn-circle default']")
                         person_xpath.click()
                         print(f"Entrou no iframe de Partes")
                         try:
@@ -228,9 +230,8 @@ def automacao_agibank_juridico(username, password):
 
                         try:
                             linha_person_iframe = ''
-                            print(f"Procura a linha da grid que contenha o nme do adverso: //html/body/form/div[3]/div[2]/div/div[1]/div[2]/div[2]/div/div/div[2]/div/div[2]/div[4]/table/tbody/tr[td/a[contains(concat(' ', normalize-space(.), ' '), ' {nm_adverso} ')]]/td[2]/a")
-
-                            linha_person_iframe = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, f"//html/body/form/div[3]/div[2]/div/div[1]/div[2]/div[2]/div/div/div[2]/div/div[2]/div[4]/table/tbody/tr[td/a[contains(concat(' ', normalize-space(.), ' '), ' {nm_adverso} ')]]/td[2]/a"))).text
+                            print(f"Procura a linha da grid que contenha o nme do adverso: //table/tbody/tr[td/a[contains(concat(' ', normalize-space(.), ' '), ' {nm_adverso} ')]]/td[@data-field='PARTICIPANTE']/a")
+                            linha_person_iframe = WebDriverWait(driver, 20).until(EC.element_to_be_clickable((By.XPATH, f"//table/tbody/tr[td/a[contains(concat(' ', normalize-space(.), ' '), ' {nm_adverso} ')]]/td[@data-field='PARTICIPANTE']/a"))).text
                             print(f"valor linha com nome do adverso: {linha_person_iframe}")
                         except:
                             print("Caso não encontre a linha com o nome do adverso")
