@@ -121,7 +121,7 @@ def automacao_agibank_juridico(username, password):
             # Seletores para o campo de "Cadastrado em":
             range_datas = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@class='form-control']")))
             # range_datas.send_keys(yesterday_str+"00:00 - "+yesterday_str+"23:59")
-            range_datas.send_keys("01/01/2026 00:00 - 10/01/2026 01:54")
+            range_datas.send_keys("01/01/2026 00:00 - 09/01/2026 19:44")
             print(f"Data inicial ('{yesterday_str}') e data final ({today_str})preenchidas.")
             # sleep(5)
             pesquisar_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[3]/div[2]/div/div/div[2]/div/div[2]/span/div/div/div/div[3]/a[2][@class='btn btn-primary filter-button']")))
