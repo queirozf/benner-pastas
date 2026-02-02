@@ -19,7 +19,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.keys import Keys
 
 
-def automacao_agibank_juridico(username, password):
+def automacao_agibank_juridico(username, password, dt_inicio, dt_fim):
     """
     Realiza o login no sistema Agibank Jurídico Benner e navega para a página de processos.
 
@@ -121,8 +121,8 @@ def automacao_agibank_juridico(username, password):
             # Seletores para o campo de "Cadastrado em":
             range_datas = wait.until(EC.element_to_be_clickable((By.XPATH, "//input[@class='form-control']")))
             # range_datas.send_keys(yesterday_str+"00:00 - "+yesterday_str+"23:59")
-            range_datas.send_keys("01/01/2026 00:00 - 09/01/2026 19:44")
-            print(f"Data inicial ('{yesterday_str}') e data final ({today_str})preenchidas.")
+            range_datas.send_keys(dt_inicio+" - "+dt_fim)
+            print(f"Data inicial ('{dt_inicio}') e data final ({dt_fim})preenchidas.")
             # sleep(5)
             pesquisar_button = wait.until(EC.element_to_be_clickable((By.XPATH, "//div[3]/div[2]/div/div/div[2]/div/div[2]/span/div/div/div/div[3]/a[2][@class='btn btn-primary filter-button']")))
             pesquisar_button.click()
@@ -324,6 +324,9 @@ if __name__ == "__main__":
 
     benner_username = os.getenv("AGIBANK_USER")
     benner_password = os.getenv("AGIBANK_PASS")
+    benner_dt_inicial = os.getenv("AGIBANK_INICIO")
+    benner_dt_final = os.getenv("AGIBANK_FINAL")
+
 
     if not benner_username or not benner_password:
         print("Erro: As variáveis AGIBANK_USER e AGIBANK_PASS não estão definidas.")
@@ -331,7 +334,4 @@ if __name__ == "__main__":
         print("  export AGIBANK_USER=seu_usuario")
         print("  export AGIBANK_PASS=sua_senha")
         sys.exit(1)
-
-
-
-    automacao_agibank_juridico(benner_username, benner_password)
+    automacao_agibank_juridico(benner_username, benner_password, benner_dt_inicial, benner_dt_final)
